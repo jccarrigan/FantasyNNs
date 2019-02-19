@@ -20,6 +20,10 @@ prediction = offenseive_model.predict(input_data)
 
 print('  Target   Predicted')
 
-for i in range(input_data.shape[0])[:10]:
+total = 0
+for i in range(input_data.shape[0])[:20]:
     predicted = prediction[i][0]
     print(f'{targets[i]:6.2f} \t {predicted:6.2f}')
+
+
+

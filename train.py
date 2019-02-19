@@ -2,7 +2,7 @@ import numpy as np
 from keras import models, layers
 from keras.utils import normalize
 
-EPOCHS = 120
+EPOCHS = 80
 
 dataset = np.load('dataset.npy')
 
@@ -34,6 +34,6 @@ history = model.fit(
     y=targets,
     validation_split=.25,
     epochs=EPOCHS,
-    batch_size=64)
+    batch_size=32)
 
 model.save('offensive_player_fp_predict.h5')
