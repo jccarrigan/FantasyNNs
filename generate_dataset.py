@@ -38,10 +38,11 @@ def generate_dataset():
             stats_df = None
             continue
 
-        opponents, weekly_stats = get_weekly_stats(week)
+        teams, weekly_stats = get_weekly_stats(week)
 
         if stats_df is not None:
-            stats_df['opponent'] = opponents
+            stats_df['opponent'] = teams['opponent']
+            stats_df['team'] = teams['team']
             stats_df = stats_df.dropna(subset=['opponent'])
             stats_df['actual_fp'] = weekly_stats['fp']
 
@@ -51,6 +52,7 @@ def generate_dataset():
                 dataset = np.append(dataset, stats_df.values, axis=0)
 
             stats_df = stats_df.drop('opponent', axis=1)
+            stats_df = stats_df.drop('team', axis=1)
             stats_df = stats_df.drop('actual_fp', axis=1)
 
 
@@ -71,7 +73,7 @@ def generate_dataset():
 def get_weekly_stats(week):
     week_num = week['wk'].iloc[0]
     data_df = None
-    opponents_df = None
+    teams_df = None
     for index, game in week.iterrows():
         gid = game['gid']
         new_players = offense_df.loc[offense_df['gid'] == gid]
@@ -89,12 +91,17 @@ def get_weekly_stats(week):
         home = game['h']
 
         opponents = teams['team'].apply(lambda x: team_dict[home] if x == visiting else team_dict[visiting])
-        if opponents_df is None:
-            opponents_df = opponents
-        else:
-            opponents_df = opponents_df.append(opponents)
+        team_nums = teams['team'].apply(lambda x: team_dict[x])
 
-    return opponents_df, data_df
+        teams['opponent'] = opponents
+        teams['team'] = team_nums
+
+        if teams_df is None:
+            teams_df = teams
+        else:
+            teams_df = teams_df.append(teams)
+
+    return teams_df, data_df
 
 
 
