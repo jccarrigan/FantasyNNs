@@ -3,68 +3,67 @@ from keras import models, layers
 from keras.utils import normalize
 
 EPOCHS = 200
+BATCH_SIZE = 64
 
 POINT_INDEX = 2
 
+NUM_FEATURES = 20
+
+
 def main():
     dataset = np.load('dataset.npy')
-    x, y = generate(dataset)
-    train(x, y)
+    train(dataset)
 
-
-def train(x, y):
+def train(dataset):
     # input_data = normalize(
     #     x.astype('float32'),
     #     axis=-1,
     # )
     model = models.Sequential()
-    model.add(layers.LSTM(64, input_shape=(None, 20)))
+    model.add(layers.LSTM(128, return_sequences=True, input_shape=(None, NUM_FEATURES)))
+    model.add(layers.LSTM(128, return_sequences=True,))
+    model.add(layers.LSTM(64))
+    model.add(layers.Dense(32))
     model.add(layers.Dense(1))
     print(model.summary())
 
     model.compile(optimizer='adam', loss='mae',
                   metrics=['mae'])
 
-    history = model.fit(
-        x=x,
-        y=y,
-        validation_split=.25,
-        epochs=EPOCHS,
-        batch_size=16)
+    history = model.fit_generator(
+        generate(dataset),
+        steps_per_epoch=len(dataset) * 10 // BATCH_SIZE,
+        epochs=EPOCHS)
 
     model.save('offensive_player_fp_predict.h5')
 
 
 def generate(dataset):
-    samples = []
-    targets = []
-    for player in dataset:
-        prev_week = 0
-        data = []
-        for week in player:
-            if week[-1] < prev_week:
-                perm_data, target_vals = perm(data)
-                samples.extend(perm_data)
-                targets.extend(target_vals)
-                data = []
-            data.append(week)
-            prev_week = week[-1]
+    n = 5
 
-    return samples, targets
+    batch_x = np.zeros((BATCH_SIZE, n, NUM_FEATURES))
+    batch_y = np.zeros((BATCH_SIZE, 1))
 
+    samples = 0
+    count = 0
+    while True:
+        for player_games in dataset:
+            # Not enough data, move along
+            if len(player_games) <= n:
+                continue
 
-def perm(data):
-    perms = []
-    targets = []
-    for i, _ in enumerate(data):
-        try:
-            targets.append(data[i + 1][POINT_INDEX])
-        except IndexError:
-            continue
-        perms.append(data[:i + 1])
+            subsets = len(player_games) // n
 
-    return perms, targets
-
+            for i in range(0, subsets, n):
+                batch_x[samples] = player_games[i:i + n]
+                batch_y[samples] = player_games[i + n][2]
+                samples += 1
+                if samples == BATCH_SIZE:
+                    print(batch_x)
+                    yield batch_x, batch_y
+                    batch_x = np.zeros((BATCH_SIZE, n, NUM_FEATURES))
+                    batch_y = np.zeros((BATCH_SIZE, 1))
+                    samples = 0
 
 if __name__ == '__main__':
     main()
